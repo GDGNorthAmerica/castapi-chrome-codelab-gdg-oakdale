@@ -1,0 +1,165 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Secret message, Party Edition</title>
+
+    <style type="text/css">
+      body {
+        font-family: Roboto, Helvetica, sans-serif;
+        padding: 1em;
+      }
+
+      #instructions {
+        background-color: #eee;
+        padding: 1em;
+        margin: 1em;
+      }
+    
+      input, button {
+        font-size: 1.6em;
+        font-weight: bold;
+        margin: 0.2em;
+      }
+
+      #message {
+        width: 100%;
+      }
+
+    </style>
+  </head>
+  
+  <body>
+  
+  <h1>Secret message, Party Edition</h1>
+  <p>Because anonymous messaging to a big screen at a party is a great idea.</p>
+
+  <div id="instructions">Cast to a Chromecast and then send messages to party the big screen.</div>
+
+  <div>
+    <input id="message" type="text">
+    <button id="sendMessage">Send</button>
+  </div>
+</div>
+
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js'></script>
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+
+<script>
+$(document).ready(function($) {
+  secretPartyMessages.init();
+
+  $('#sendMessage').on('click', function(){
+    var message = $('#message').val();
+    secretPartyMessages.sendMessage(message);        
+  });
+
+});
+
+var secretPartyMessages = (function () {
+  
+  // Use our custom receiver
+  var applicationId = '34B6FD24';
+  var namespace = 'urn:x-cast:com.gdgoakdale.cast.codelab.secretmessage';
+  
+  // use Google's sample, which has an existing receiver
+  //var applicationId = '794B7BBF';
+  //var namespace = 'urn:x-cast:com.google.cast.sample.helloworld';
+  var session = null;
+
+  initializeCastApi = function() {
+    var sessionRequest = new chrome.cast.SessionRequest(applicationId);
+    var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
+      sessionListener,
+      receiverListener);
+
+    chrome.cast.initialize(apiConfig, onInitializeSuccess, onError);
+  };
+
+  onInitializeSuccess = function() {
+    console.log("Successfully initialed Chromecast API");
+  };
+
+  receiverListener = function(event) {
+    if(event === 'available') {
+      console.log("receiver found");
+    }
+    else {
+       console.log("receiver list empty");
+    }
+  }
+
+  sessionListener = function(event){
+    console.log("Session ID: %s", event.sessionId);
+    session = event;
+
+    //
+    session.addUpdateListener(sessionUpdateListener);
+
+    // Get messages from receiver
+    session.addMessageListener(namespace, receiverMessage);
+  }
+
+  // Are we alive?
+  sessionUpdateListener = function(isAlive) {
+    var message = isAlive ? 'Session Updated' : 'Session Removed';
+    message += ': ' + session.sessionId;
+    console.log(message);
+
+    if (!isAlive) {
+      session = null;
+    }
+  };
+
+  // Log message from the receiver
+  receiverMessage = function(namespace, message) {
+    console.log("receiverMessage: %s, %s", namespace, message);
+  };
+
+  onError = function(message) {
+    console.log("onError fired!", message);
+  };
+
+  onSuccess = function(message) {
+    console.log("onSuccess fired!", message);
+  };
+
+  onStopAppSuccess = function() {
+    console.log('onStopAppSuccess fired!');
+  };
+
+  stop = function() {
+    session.stop(onStopAppSuccess, onError);
+  };
+
+  return {
+    init: function() {
+      if (!chrome.cast || !chrome.cast.isAvailable) {
+        setTimeout(initializeCastApi, 1000);
+      }
+    },
+    sendMessage: function(message) {
+      if (session !== null) {
+        session.sendMessage(namespace, 
+          message, 
+          onSuccess.bind(this, "Message sent: " + message), 
+          onError);
+      }
+      else {
+        chrome.cast.requestSession(function(e) {
+            session = e;
+            session.sendMessage(namespace, 
+              message, 
+              onSuccess.bind(this, "Message sent: " + message), 
+              onError);
+          }, onError);
+      }
+    }
+  };
+
+})();
+
+</script>
+</body>
+</html>
