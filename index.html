@@ -1,0 +1,552 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Google Cast API Codelab</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Cast API Codelab</h1>
+        <p>Getting started using Google Cast API as seen at a May 2015 meetup at GDG Oakdale.</p>
+        <ul>
+          <li><a href="https://github.com/GDGOakdale/castapi-chrome-codelab-gdg-oakdale/archive/master.zip">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/GDGOakdale/castapi-chrome-codelab-gdg-oakdale/archive/master.tar.gz">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/GDGOakdale/castapi-chrome-codelab-gdg-oakdale">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h3>
+          <a id="welcome" class="anchor" href="#welcome" aria-hidden="true">
+            <span class="octicon octicon-link"></span>
+          </a>Welcome!
+        </h3>
+        <p>This codelab is designed to help you learn about using Google Cast API. During this lab, we're going to build a secret chat party edition application.</p>
+        
+        <h3>
+          <a id="things-we-use" class="anchor" href="#things-we-use" aria-hidden="true">
+            <span class="octicon octicon-link"></span>
+          </a>Things we'll use
+        </h3>
+        <p>Documentation! You can never have enough of it and during this codelab you may find yourself looking for one more method to go that extra mile. Docs you may find useful include:</p>
+        
+        <ul>
+          <li><a href="https://developers.google.com/cast/docs/chrome_sender">Google Cast Chrome documentation</a></li>
+          <li><a href="https://chrome.google.com/webstore/detail/google-cast-beta/dliochdbjfkdbacpmhlcpmleaejidimm?hl=en">Google Cast Beta extension for Chrome</a></li>
+        </ul>
+
+        <h3>
+          <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true">
+            <span class="octicon octicon-link"></span>
+          </a>Disclaimer
+        </h3>
+
+        <p>When developing and deploying custom applications that fall outside the scope of the base receivers available, you would need a Google Cast Developer Account (which costs $5.00 USD). This codelab builds on top of an existing Google Cast sample allowing you to develop without the account.</p>
+        
+        <h3>
+          <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true">
+            <span class="octicon octicon-link"></span>
+          </a>Getting setup
+        </h3>
+
+        <blockquote>All code solutions are available in the <a href="https://github.com/GDGOakdale/castapi-chrome-codelab-gdg-oakdale">repo</a>.</blockquote>
+        
+        <p>Before we can begin, make sure the Google Cast (beta) extension is installed. Once installed we can go to options via right clicking on the icon:</p>
+        
+        <img src="images/screenshot-20150506-options.png" alt="options select">
+
+        <p>Note, this is different than the non-beta version of the extension, giving us additional tools such as the log to help give us additional debug support. Let's enable the log to see what conversations we're having with devices:</p>
+        
+        <img src="images/screenshot-20150506-log-window.png" alt="enable log window">
+        
+        <p>Besides [INFO] messages, the log can also provide insight into errors and other issues that you may run into while developing for Cast.</p>
+        
+        <h3>
+          <a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true">
+            <span class="octicon octicon-link"></span>
+          </a>Getting started
+        </h3>
+        
+        <p>Now, let's start by creating a directory for our application:</p>
+<pre><code>➜ ~ mkdir my-secret-message
+➜ ~ cd my-secret-message
+</code></pre>
+
+        <p>Next, we need to create a few basic files:</p>
+        
+<pre><code>➜ ~ touch sender.html
+➜ ~ touch receiver.html
+</code></pre>
+
+        <p>Why two html files? Cast API works by defining:</p>
+        <ul>
+          <li>Sender Application - manages the user interaction with your content</li>
+          <li>Receiver Application - handles communication between the sender app and the receiver device, runs the Cast device.</li>
+        </ul>
+        
+        <p>Now, let's write some code to get our app off the ground.</p>
+
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Structuring our sender
+      </h3>
+      
+      <p>Let's start with the markup for <code>sender.html</code>:</p>
+
+<pre><code>
+&lt;html lang=&quot;en&quot;&gt;
+  &lt;head&gt;
+    &lt;meta charset=&quot;utf-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+
+    &lt;title&gt;Secret message, Party Edition&lt;/title&gt;
+
+    &lt;style type=&quot;text/css&quot;&gt;
+      body {
+        font-family: Roboto, Helvetica, sans-serif;
+        padding: 1em;
+      }
+
+      #instructions {
+        background-color: #eee;
+        padding: 1em;
+        margin: 1em;
+      }
+    
+      input, button {
+        font-size: 1.6em;
+        font-weight: bold;
+        margin: 0.2em;
+      }
+
+      #message {
+        width: 100%;
+      }
+
+    &lt;/style&gt;
+  &lt;/head&gt;
+  
+  &lt;body&gt;
+  
+  &lt;h1&gt;Secret message, Party Edition&lt;/h1&gt;
+  &lt;p&gt;Because anonymous messaging to a big screen at a party is a great idea.&lt;/p&gt;
+
+  &lt;div id=&quot;instructions&quot;&gt;Cast to a Chromecast and then send messages to party the big screen.&lt;/div&gt;
+
+  &lt;div&gt;
+    &lt;input id=&quot;message&quot; type=&quot;text&quot;&gt;
+    &lt;button id=&quot;sendMessage&quot;&gt;Send&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script src=&#039;https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js&#039;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://www.gstatic.com/cv/js/sender/v1/cast_sender.js&quot;&gt;&lt;/script&gt;
+
+&lt;script&gt; // more code here &lt;/script&gt;  
+
+</code></pre>
+
+      <p>We've defined the form we'll use to send messages to the Cast API and some basic layout (feel free to make it your own). Now we need some layout of what our class, <code>secretPartyMessages</code> should look like. This class will do that talking to our Cast device:</p>
+      
+<pre><code>var secretPartyMessages = (function () {
+
+  // use Google's sample, which has an existing receiver
+  var applicationId;
+  var namespace;
+  var session = null;
+
+  initializeCastApi = function() {
+    // todo
+  };
+
+  // more things
+
+  return {
+    init: function() {
+      // todo
+    },
+    sendMessage: function(message) {
+      // todo
+    }
+  };
+
+})();
+</code></pre>
+      
+      <p>The structure seems simple enough; connect and send a message. Now it's just a matter of wiring up our class to the Cast API.</p>
+
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Wiring our sender
+      </h3>
+      
+      <p>First, we need to set up some private variables to hold our application settings:</p>
+
+<pre><code>// use Google's sample, which has an existing receiver
+var applicationId = '794B7BBF';
+var namespace = 'urn:x-cast:com.google.cast.sample.helloworld';
+var session = null;
+</code></pre>
+
+      <p>How do we get this information? In this codelab, we're using Google's existing demo application id and namespace. When developing an application, we'd get the application id from the Google Cast Developer panel after we define our application settings:</p>
+      
+      <img src="images/screenshot-20150506-appid.png" alt="getting application id from console">
+      
+      <blockqoute>You can do the above in the console now if you like, but we're trying to make things as easy as possible for this lab.</blockqoute>
+      
+      <p>Now, we need to a way to initialize the Cast API. First, let's create a private method called <code>initializeCastApi()</code>:</p>
+      
+<pre><code>initializeCastApi = function() {
+  var sessionRequest = new chrome.cast.SessionRequest(applicationId);
+  var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
+    sessionListener,
+    receiverListener);
+
+  chrome.cast.initialize(apiConfig, onInitializeSuccess, onError);
+}; 
+</code></pre>
+
+      <p>You can see we're using two methods:</p>
+      
+      <ul>
+        <li><a href="https://developers.google.com/cast/docs/reference/chrome/chrome.cast.SessionRequest">chrome.cast.SessionRequest()</a> - allows us to request or start our session</li>
+        <li><a href="https://developers.google.com/cast/docs/reference/chrome/chrome.cast.ApiConfig">chrome.cast.ApiConfig()</a> - holds our configuration for the API</li>
+      </ul>
+      
+      <p>In the case of ApiConfig(), we can see that we're passing two methods: 
+
+      <ul>
+        <li><code>sessionListener()</code> - A listener to notify when a session is available to the application</li>
+        <li><code>receiverListener()</code> -  A listener to notify when there is a receiver available</li>
+      </ul>
+
+      <p>Let's define the method for <code>receiverListener()</code> to let us know what's available:</p>
+      
+<pre><code>receiverListener = function(event) {
+  if(event === 'available') {
+    console.log("Receiver found!");
+  }
+  else {
+    console.log("Receiver list empty! Oh No!");
+  }
+}
+</code></pre>
+
+      <p>Now let's define our <code>sessionListener()</code>:</p>
+
+<pre><code>sessionListener = function(event){
+  
+  console.log("Session ID: %s", event.sessionId);
+  
+  session = event;
+
+  session.addUpdateListener(sessionUpdateListener);
+
+  session.addMessageListener(namespace, receiverMessage);
+}
+</code></pre>
+
+      <p>As you can see, we do a little more work; we set our private <code>session</code> variable to our new session and we add a couple of listeners to help us know how are session is doing:</p>
+
+      <ul>
+        <li><code>session.addUpdateListener(sessionUpdateListener)</code> - checks to see if session is still alive</li>
+        <li><code>session.addMessageListener(namespace, receiverMessage)</code> - logs messages that comes from the receiver</li>
+      </ul>
+
+      <p><code>sessionUpdateListener()</code> needs to handle our session heartbeat, so let's define that method so that it checks if our session is still active:</p>
+
+<pre><code>sessionUpdateListener = function(isAlive) {
+  var message = isAlive ? 'Session Updated' : 'Session Removed';
+  message += ': ' + session.sessionId;
+  console.log(message);
+
+  if (!isAlive) {
+    session = null;
+  }
+};  
+</code></pre>
+
+      <p>We can see that if things aren't alive, we reset our session.</p>
+
+      <p>For <code>receiverMessage()</code>, we can just log what our receiver sends back for now:</p>
+
+<pre><code>receiverMessage = function(namespace, message) {
+  console.log("receiverMessage: %s, %s", namespace, message);
+};
+</code></pre>
+
+      <p>Why might we want to know what the receiver is doing? If we have multiple clients connected to the Cast device playing a game, when clients send state to the device, we may want the device to relay that information to other players.</p>
+
+      <p>With all the methods now defined, we can update our public <code>init()</code> method to initialize:</p>
+
+<pre><code>init: function() {
+  if (!chrome.cast || !chrome.cast.isAvailable) {
+    setTimeout(initializeCastApi, 1000);
+  }
+}
+</code></pre>
+
+      <p>We can now call this method after the page is ready:</p>
+
+<pre><code>$(document).ready(function($) {
+  secretPartyMessages.init();
+});
+</code></pre>
+
+      <p>If we run our page from python's simpleHTTPserver, open our dev tools console, and select a Cast device, we can see the conversation from our code above:</p>
+
+      <img src="images/screenshot-20150506-console-log.png" alt="console output">
+
+      <p>Why the <code>net::ERR_FAILED</code> message? Because we don't have the non-beta version of the Google Cast extension installed. This does not effect our code as can be seen in the screenshot.</p>
+      
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Sending a message
+      </h3>
+      
+      <p>With our basic wireup of talking to the Cast device and receiving a session setup, we now need a way to send a message to the receiver. We can define a public method called <code>sendMessage()</code> within our class to help us send messages:</p>
+      
+<pre><code>sendMessage: function(message) {
+  if (session !== null) {
+    session.sendMessage(namespace, 
+      message, 
+      onSuccess.bind(this, "Message sent: " + message), 
+      onError);
+  }
+  else {
+    chrome.cast.requestSession(function(e) {
+        session = e;
+        session.sendMessage(namespace, 
+          message, 
+          onSuccess.bind(this, "Message sent: " + message), 
+          onError);
+      }, onError);
+  }
+}  
+</code></pre>
+
+      <blockquote>Note: the use of the requestSession() in the else block does not cause our sessionListener to be invoked, so we must set our session from the callback.</blockquote>
+
+      <p>Now that we have a means to send messages to the receiver, we just need to wire up our button:</p>
+      
+<pre><code>$('#sendMessage').on('click', function(){
+  var message = $('#message').val();
+  secretPartyMessages.sendMessage(message);        
+});
+</code></pre>
+
+      <p>If we Cast our application and click send message, we'll now see this on our Cast device:</p>
+
+      <img src="images/IMG_20150506_142355.jpg" alt="cast to Chromecast on projector">
+
+      <blockquote>Why the "Sample App" text? Because we're using Google's application id and namespace, which connect to their hosted receiver.</blockquote>
+
+      <p>If we look at our Dev Tools console, we can see the conversation:</p>
+
+      <img src="images/screenshot-20150506-message-sent.png" alt="more dev tools console for the win">
+
+      <blockquote>Stuck? Check the <a href="">step-Final</a> folder for a solution.</blockquote>
+
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Defining our receiver
+      </h3>
+      
+      <blockquote>Note, to use the following code you'll need an account on the Google Cast Developer console, as well as Chromecast device in developer mode. You don't have to do this part of the codelab unless you want to dive further.</blockquote>
+      
+      <p>Custom receivers allow us to do more; we can define things that are specific to our applications or game.</p>
+
+      <p>Let's start by defining some HTML and CSS for our <code>message-receiver.html</code>:</p>
+
+<pre><code>&lt;html lang=&quot;en&quot;&gt;
+  &lt;head&gt;
+    &lt;meta charset=&quot;utf-8&quot;&gt;
+    &lt;title&gt;Secret message, Party Edition&lt;/title&gt;
+    &lt;style type=&quot;text/css&quot;&gt;
+      body {
+        overflow:hidden;
+      }
+      #container {
+        height: 720px;
+        width: 1280px;
+        text-align:center;
+        display: table-cell;
+        vertical-align:middle;
+        background: radial-gradient(ellipse at center,  #7d7e7d 0%,#0e0e0e 100%);
+        font-family: Roboto, Helvetica, sans-serif;
+        font-weight: 600;
+        font-size:3em;
+
+        color: #fff;
+      }
+      #container span {
+        font-size: 50%;
+        font-style: italic;
+      }
+    &lt;/style&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div id=&quot;container&quot;&gt;
+      &lt;span&gt;Secret message, Party Edition&lt;/span&gt;
+      &lt;div id=&quot;message&quot;&gt;Send a message....&lt;/div&gt;
+    &lt;/div&gt;  
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+    <p>Nothing too out of the ordinary; we've defined our container div to fit one of the output target for Cast (you can also see these dimensions in the Google Cast (beta) extension options).</li>
+
+    <p>Now let's add the receiver library:</p>
+
+<pre><code>&lt;script src=&quot;//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js&quot;&gt;&lt;/script&gt;
+</code></pre>  
+
+    <p>Let's wire up some methods we can listen for messages (the code is commented and is nearly identical to Google's sample):</p>
+
+<pre><code>// define our namespace
+  var namespace = 'urn:x-cast:com.gdgoakdale.cast.codelab.secretmessage';
+
+  // Update DOM for message
+  function displayText(text) {
+    document.getElementById("message").innerHTML = text;
+    window.castReceiverManager.setApplicationState("Message Received!" + text);
+  };
+
+  window.onload = function() {
+
+    cast.receiver.logger.setLevelValue(0);
+    
+    window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+    
+    console.log('Starting Receiver Manager');
+
+    // handler for the 'ready' event
+    castReceiverManager.onReady = function(event) {
+      console.log('Received Ready event: ' + JSON.stringify(event.data));
+      window.castReceiverManager.setApplicationState("Application status is ready...");
+    };
+      
+    // handler for 'senderconnected' event
+    castReceiverManager.onSenderConnected = function(event) {
+      console.log('Received Sender Connected event: ' + event.data);
+      console.log(window.castReceiverManager.getSender(event.data).userAgent);
+    };
+      
+    // handler for 'senderdisconnected' event
+    castReceiverManager.onSenderDisconnected = function(event) {
+      console.log('Received Sender Disconnected event: ' + event.data);
+
+      if (window.castReceiverManager.getSenders().length == 0) {
+        window.close();
+      }
+    };
+    
+    // handler for 'systemvolumechanged' event
+    castReceiverManager.onSystemVolumeChanged = function(event) {
+      console.log('Received System Volume Changed event: ' + event.data['level'] + ' ' +
+          event.data['muted']);
+    };
+
+    // create a CastMessageBus to handle messages for a custom namespace
+    window.messageBus = window.castReceiverManager.getCastMessageBus(namespace);
+
+    // handler for the CastMessageBus message event
+    window.messageBus.onMessage = function(event) {
+      console.log('Message [' + event.senderId + ']: ' + event.data);
+        
+      displayText(event.data);
+
+      // inform all senders on the CastMessageBus of the incoming message event
+      // sender message listener will be invoked
+      window.messageBus.send(event.senderId, event.data);
+    }
+
+    // initialize the CastReceiverManager with an application status message
+    window.castReceiverManager.start({statusText: "Application is starting"});
+      console.log('Receiver Manager started');
+    };
+</code></pre>
+
+      <p>Key takeaways:</p>
+
+      <ul>
+        <li>We obtain a reference to CastReceiverManager via <code>cast.receiver.CastReceiverManager.getInstance()</code></li>
+        <li>We setup methods to handle various events like <code>onSenderConnected</code> and <code>onSenderDisconnected</code></li>
+        <li>We define a channel to communicate on using our namespace with <code>window.castReceiverManager.getCastMessageBus</code></li>
+        <li>We setup a listen on the messageBus for <code>onMessage()</code></li>
+        <li><code>onMessage</code> parses the message from the sender on the namespace we defined and updates our DOM with <code>displayText()</code></li>
+      </ul>
+
+      <p>If we test this, we'll see this on our Cast device:</p>
+
+      <img src="images/IMG_20150506_145043.jpg">
+
+      <p>We can also remotely debug on the Cast device using Chrome dev tools. Make sure that your Cast device is enabled for debug in the developer console:</p>
+
+      <img src="images/screenshot-20150506-devices.png">
+
+      <p>Next find the IP address on your local network of the Cast device (you can use the Android Chromecast app to see the address or look up the DHCP table in your router). Then you'll need to go to:</p>
+
+<pre><code>http://[CAST_DEVICE_IP]:9222/  
+</code></pre>
+
+      <p>If you app is casting, you'll see it listed and be able to debug and see all the console messages we just wrote in our code:</p>
+
+      <img src="images/screenshot-20150506-debugging-remote.png">
+
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Advanced edition: the Firebase workaround
+      </h3>
+      
+      <p>You might be asking yourself "but how does this work on mobile Chrome? Since there isn't a Cast plugin for mobile Chrome, you'd note that the above fails for mobile devices.</p>
+      
+      <p>You options would be to:</p>
+      
+      <ul>
+        <li>Write an Android application</li>
+        <li>Use Firebase to workaround the issue</li>
+      </ul>
+      
+      <p>This is outside the scope of the general usage of Cast API, but we've included a solution in the main repo that shows you how to use Firebase to send messages to the Cast device via the desktop cast sender app.</p>
+
+      <p>How it works:</p>
+
+      <ul>
+        <li>Application creates a unique url that can be sent to friends.</li>
+        <li>The desktop casts to the target Cast device.</li>
+        <li>Users send messages to Firebase, not requiring a connect to the Cast device.</li>
+        <li>Messages are relayed and displayed on Cast device.</li>
+      </ul>
+      
+      <blockquote>Check the <a href="https://github.com/GDGOakdale/castapi-chrome-codelab-gdg-oakdale/tree/master/step-Firebase">step-Firebase</a> folder for a solution.</blockquote>
+
+      <h3>
+        <a id="getting-started" class="anchor" href="#more-events-please" aria-hidden="true">
+          <span class="octicon octicon-link"></span>
+        </a>Success!
+      </h3>
+
+      <p>Congratulations! You have completed this codelab!</p>
+
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/justinribeiro">justinribeiro</a>, <a href="https://github.com/jamesduvall">jamesduvall</a>, <a href="https://github.com/jamescha">jamescha</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+  </body>
+</html>
